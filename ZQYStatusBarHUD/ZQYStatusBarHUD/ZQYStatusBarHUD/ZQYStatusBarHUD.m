@@ -8,8 +8,6 @@
 
 #import "ZQYStatusBarHUD.h"
 
-#define ZQY_MASSAGE_FONT [UIFont systemFontOfSize:13]
-
 static CGFloat const ZQYMessageDuration = 2.0;
 static CGFloat const ZQYAnimationDuration = 0.25;
 
@@ -18,17 +16,33 @@ static CGFloat const ZQYAnimationDuration = 0.25;
 static UIWindow *window_;
 static NSTimer *timer_;
 
-+ (void)setupWindow{
++ (ZQYStatusBarHUD *)sharedHud {
+    static ZQYStatusBarHUD *hud;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        hud = [[self alloc] init];
+        hud.notificationStyle = ZQYNotificationStyleStatusBarNotification;
+        hud.notificationLabelFont = [UIFont systemFontOfSize:13.f];
+        hud.notificationLabelTextColor = [UIColor whiteColor];
+        hud.notificationLabelBackGroundColor = [UIColor blackColor];
+        hud.block = nil;
+    });
+    return hud;
+}
+
+- (void)setupWindow{
     
-    CGFloat windowH = 20;
+    CGFloat windowH = self.notificationStyle == ZQYNotificationStyleStatusBarNotification ? 20 : 64;
     CGRect frame = CGRectMake(0, - windowH, [UIScreen mainScreen].bounds.size.width, windowH);
-    
+
     window_.hidden = YES;
     window_ = [[UIWindow alloc] init];
-    window_.backgroundColor = [UIColor blackColor];
+    window_.backgroundColor = self.notificationLabelBackGroundColor;
     window_.windowLevel = UIWindowLevelAlert;
     window_.frame = frame;
     window_.hidden = NO;
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(notificationTapped)];
+    [window_ addGestureRecognizer:tap];
     
     frame.origin.y = 0;
     [UIView animateWithDuration:ZQYAnimationDuration animations:^{
@@ -36,62 +50,58 @@ static NSTimer *timer_;
     }];
 }
 
-+ (void)zqy_showSuccess:(NSString *)msg{
+- (void)zqy_showSuccess:(NSString *)msg{
     [self zqy_showMessage:msg image:[UIImage imageNamed:@"ZQYStatusBarHUD.bundle/success"]];
 }
 
-+ (void)zqy_showError:(NSString *)msg{
+- (void)zqy_showError:(NSString *)msg{
     [self zqy_showMessage:msg image:[UIImage imageNamed:@"ZQYStatusBarHUD.bundle/fail"]];
 }
 
-+ (void)zqy_showLoading:(NSString *)msg{
+- (void)zqy_showLoading:(NSString *)msg{
     
     [timer_ invalidate];
     timer_ = nil;
-    
     [self setupWindow];
-    
     UILabel *label = [[UILabel alloc] init];
-    label.font = ZQY_MASSAGE_FONT;
+    label.font = self.notificationLabelFont;
     label.frame = window_.bounds;
     label.textAlignment = NSTextAlignmentCenter;
     label.text = msg;
-    label.textColor = [UIColor whiteColor];
+    label.textColor = self.notificationLabelTextColor;
     [window_ addSubview:label];
     
     UIActivityIndicatorView *loadingView = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite];
     [loadingView startAnimating];
-    CGFloat msgW = [msg sizeWithAttributes:@{NSFontAttributeName :ZQY_MASSAGE_FONT}].width;
+    CGFloat msgW = [msg sizeWithAttributes:@{NSFontAttributeName :self.notificationLabelFont}].width;
     CGFloat centerX = (window_.frame.size.width - msgW) / 2 - 20;
     CGFloat centerY = window_.frame.size.height / 2;
     loadingView.center = CGPointMake(centerX, centerY);
     [window_ addSubview:loadingView];
 }
 
-+ (void)zqy_showMessage:(NSString *)msg{
+- (void)zqy_showMessage:(NSString *)msg{
     [self zqy_showMessage:msg image:nil];
 }
 
-+ (void)zqy_showMessage:(NSString *)msg image:(UIImage *)image{
-    
+- (void)zqy_showMessage:(NSString *)msg image:(UIImage *)image{
     [timer_ invalidate];
-    
     [self setupWindow];
-    
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     if (image) {
         [button setImage:image forState:UIControlStateNormal];
         button.titleEdgeInsets = UIEdgeInsetsMake(0, 10, 0, 0);
     }
     [button setTitle:msg forState:UIControlStateNormal];
-    button.titleLabel.font = ZQY_MASSAGE_FONT;
+    button.titleLabel.font = self.notificationLabelFont;
     button.frame = window_.bounds;
     [window_ addSubview:button];
     
     timer_ = [NSTimer scheduledTimerWithTimeInterval:ZQYMessageDuration target:self selector:@selector(zqy_hidden) userInfo:nil repeats:NO];
 }
 
-+ (void)zqy_hidden{
+- (void)zqy_hidden{
+    self.block = nil;
     [UIView animateWithDuration:ZQYAnimationDuration animations:^{
         CGRect frame = window_.frame;
         frame.origin.y = - frame.size.height;
@@ -100,5 +110,17 @@ static NSTimer *timer_;
         window_ = nil;
         timer_ = nil;
     }];
+}
+
+- (void)setNotificationLabelBackGroundColor:(UIColor *)notificationLabelBackGroundColor {
+    _notificationLabelBackGroundColor = notificationLabelBackGroundColor;
+    window_.backgroundColor = notificationLabelBackGroundColor;
+}
+
+- (void)notificationTapped {
+    if (self.block) {
+        self.block();
+    }
+    [self zqy_hidden];
 }
 @end

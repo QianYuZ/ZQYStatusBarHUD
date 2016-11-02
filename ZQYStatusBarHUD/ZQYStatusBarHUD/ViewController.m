@@ -23,21 +23,28 @@
 
 
 - (IBAction)sccess:(id)sender {
-    [ZQYStatusBarHUD zqy_showSuccess:@"加载成功"];
+    _ZQYStatusBarHUD.notificationLabelFont = [UIFont systemFontOfSize:19];
+    _ZQYStatusBarHUD.notificationStyle = ZQYNotificationStyleNavigationBarNotification;
+    [_ZQYStatusBarHUD zqy_showSuccess:@"加载成功"];
 }
 - (IBAction)fail:(id)sender {
-    [ZQYStatusBarHUD zqy_showError:@"加载失败"];
+    _ZQYStatusBarHUD.notificationStyle = ZQYNotificationStyleStatusBarNotification;
+    [_ZQYStatusBarHUD zqy_showError:@"加载失败"];
 }
 - (IBAction)loading:(id)sender {
-    [ZQYStatusBarHUD zqy_showLoading:@"正在加载..."];
+    _ZQYStatusBarHUD.block = ^{
+        NSLog(@"aaa");
+        [self.navigationController pushViewController:[UIViewController new] animated:YES];
+    };
+    [_ZQYStatusBarHUD zqy_showLoading:@"正在加载..."];
 }
 
 - (IBAction)message:(id)sender {
-    [ZQYStatusBarHUD zqy_showMessage:@"文字文字"];
+    [_ZQYStatusBarHUD zqy_showMessage:@"文字文字"];
 }
 
 - (IBAction)hidden:(id)sender {
-    [ZQYStatusBarHUD zqy_hidden];
+    [_ZQYStatusBarHUD zqy_hidden];
 }
 
 
